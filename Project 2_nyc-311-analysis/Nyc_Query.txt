@@ -1,0 +1,106 @@
+Table Query:
+
+CREATE TABLE IF NOT EXISTS nycDataShivani (
+Unique_Key STRING, 
+Created_Date STRING,
+Closed_Date STRING,
+Agency STRING,
+Agency_Name STRING,
+Complaint_Type STRING,
+Descriptor STRING,
+Location_Type STRING,
+Incident_Zip STRING,
+Incident_Address STRING,
+Street_Name STRING,
+Cross_Street_1 STRING,
+Cross_Street_2 STRING,
+Intersection_Street_1 STRING,
+Intersection_Street_2 STRING,
+Address_Type STRING,
+City STRING,
+Landmark STRING,
+Facility_Type STRING,
+Status STRING,
+Due_Date STRING,
+Resolution_Description STRING,
+Resolution_Action_Updated_Date STRING,
+Community_Board STRING,
+BBL STRING,
+Borough STRING,
+X_Coordinate_State_Plane STRING,
+Y_Coordinate_State_Plane STRING,
+Open_Data_Channel_Type STRING,
+Park_Facility_Name STRING,
+Park_Borough STRING,
+Vehicle_Type STRING,
+Taxi_Company_Borough STRING,
+Taxi_Pick_Up_Location STRING,
+Bridge_Highway_Name STRING,
+Bridge_Highway_Direction STRING,
+Road_Ramp STRING,
+Bridge_Highway_Segment STRING,
+Latitude STRING,
+Longitude STRING,
+Location STRING
+)
+ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
+LOCATION '/user/Shivani/311_calls'
+TBLPROPERTIES ("skip.header.line.count"="1");
+
+QUERY 1: Total Number of Distinct Complaint Types.
+
+SELECT Complaint_Type, COUNT(*) AS Num_Complaints FROM nycDataShivani GROUP BY Complaint_Type ORDER BY Num_Complaints DESC LIMIT 10;
+
+SELECT COUNT(DISTINCT Complaint_Type) AS total_distinct_complaints FROM nycDataShivani WHERE Complaint_Type IS NOT NULL;
+
+QUERY 2: Number of Complaints per Borough
+
+SELECT COUNT(DISTINCT Borough) AS total_distinct_Borough FROM nycDataShivani;
+
+SELECT Borough, COUNT(*) AS Num_Complaints FROM nycDataShivani WHERE Borough IS NOT NULL GROUP BY Borough ORDER BY Num_Complaints DESC LIMIT 10;
+
+QUERY 3:
+To analyze trends of Complaint count over time in the dataset
+a. In Descending Order
+SELECT DATE_FORMAT(FROM_UNIXTIME(UNIX_TIMESTAMP(Created_Date, 'MM/dd/yyyy hh:mm:ss a')), 'yyyy-MM-dd') AS date,
+COUNT(*) AS total_complaints
+FROM nycDataShivani 
+GROUP BY DATE_FORMAT(FROM_UNIXTIME(UNIX_TIMESTAMP(Created_Date, 'MM/dd/yyyy hh:mm:ss a')), 'yyyy-MM-dd')
+ORDER BY date DESC LIMIT 10;
+
+b. In Ascending Order
+SELECT DATE_FORMAT(FROM_UNIXTIME(UNIX_TIMESTAMP(Created_Date, 'MM/dd/yyyy hh:mm:ss a')), 'yyyy-MM-dd') AS date,
+COUNT(*) AS total_complaints
+FROM nycDataShivani 
+GROUP BY DATE_FORMAT(FROM_UNIXTIME(UNIX_TIMESTAMP(Created_Date, 'MM/dd/yyyy hh:mm:ss a')), 'yyyy-MM-dd')
+ORDER BY date ASC LIMIT 10;
+
+QUERY 4: To identify complaints that existed in 2021 but do not exist in 2022, you can use a Hive query with a LEFT JOIN operation. Here's an example:
+
+SELECT a.Complaint_Type AS Complaint_Type_2021,COUNT(a.Complaint_Type) AS Total_Complaints_2021 
+FROM nycDataShivani a 
+LEFT JOIN ( 
+    SELECT DISTINCT Complaint_Type FROM nycDataShivani 
+    WHERE YEAR(FROM_UNIXTIME(UNIX_TIMESTAMP(Created_Date, 'MM/dd/yyyy hh:mm:ss a'))) = 2022
+  ) b
+ON
+  a.Complaint_Type = b.Complaint_Type
+WHERE
+  YEAR(FROM_UNIXTIME(UNIX_TIMESTAMP(a.Created_Date, 'MM/dd/yyyy hh:mm:ss a'))) = 2021
+  AND b.Complaint_Type IS NULL
+GROUP BY
+  a.Complaint_Type;
+
+QUERY 5: To find complaint types that are newly added in 2022 (not listed in 2021)
+
+SELECT b.Complaint_Type AS Newly_Added_Complaint_Type_2022, COUNT(b.Complaint_Type) AS Total_Complaints_2022
+FROM nycDataShivani b LEFT JOIN
+  (
+    SELECT DISTINCT Complaint_Type FROM nycDataShivani
+    WHERE YEAR(FROM_UNIXTIME(UNIX_TIMESTAMP(Created_Date, 'MM/dd/yyyy hh:mm:ss a'))) = 2021
+  ) a
+ON
+  a.Complaint_Type = b.Complaint_Type WHERE
+  YEAR(FROM_UNIXTIME(UNIX_TIMESTAMP(b.Created_Date, 'MM/dd/yyyy hh:mm:ss a'))) = 2022
+  AND a.Complaint_Type IS NULL GROUP BY b.Complaint_Type;
+
